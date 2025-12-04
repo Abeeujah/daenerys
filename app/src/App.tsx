@@ -24,17 +24,16 @@ import { bytecode, abi } from "./assets/circuit.json";
 import verifierJson from "./assets/verifier.json";
 import paymentJson from "./assets/payment.json";
 import vkUrl from "./assets/vk.bin?url";
-import { RpcProvider, Contract, Account } from "starknet";
+import { RpcProvider, Contract } from "starknet";
 import initNoirC from "@noir-lang/noirc_abi";
 import initACVM from "@noir-lang/acvm_js";
 import acvm from "@noir-lang/acvm_js/web/acvm_js_bg.wasm?url";
 import noirc from "@noir-lang/noirc_abi/web/noirc_abi_wasm_bg.wasm?url";
 import { useZkPassport } from "./hooks/useZkPassport";
+import { useWallet } from "./hooks/useWallet";
 
 const VERIFIER_ADDRESS = import.meta.env.VITE_VERIFIER_ADDRESS;
 const PAYMENT_ADDRESS = import.meta.env.VITE_PAYMENT_ADDRESS;
-const DEVNET_ACCOUNT_ADDRESS = import.meta.env.VITE_DEVNET_ACCOUNT_ADDRESS;
-const DEVNET_PRIVATE_KEY = import.meta.env.VITE_DEVNET_PRIVATE_KEY;
 const RPC_URL = import.meta.env.VITE_RPC_URL;
 
 function App() {
@@ -65,6 +64,14 @@ function App() {
     skipTherapistVerification,
     resetVerification,
   } = useZkPassport();
+
+  const {
+    wallet,
+    connectWallet,
+    disconnectWallet,
+    useDevnetAccount,
+    error: walletError,
+  } = useWallet();
 
   useEffect(() => {
     const initWasm = async () => {
@@ -138,6 +145,11 @@ function App() {
     });
 
   const createDeposit = async () => {
+    if (!wallet.account) {
+      handleError(new Error("Please connect your wallet first"));
+      return;
+    }
+
     try {
       updateState(ProofState.GeneratingWitness);
 
@@ -205,16 +217,10 @@ function App() {
         callData.slice(1),
       );
 
-      const account = new Account({
-        provider,
-        address: DEVNET_ACCOUNT_ADDRESS,
-        signer: DEVNET_PRIVATE_KEY,
-      });
-
       const paymentContract = new Contract({
         abi: paymentJson.abi,
         address: PAYMENT_ADDRESS,
-        providerOrAccount: account,
+        providerOrAccount: wallet.account,
       });
 
       const depositTx = await paymentContract.deposit(feltCommitment, {
@@ -240,6 +246,11 @@ function App() {
 
   const claimPayment = async () => {
     if (!parsedSecret) return;
+
+    if (!wallet.account) {
+      handleError(new Error("Please connect your wallet first"));
+      return;
+    }
 
     try {
       updateState(ProofState.GeneratingWitness);
@@ -282,16 +293,10 @@ function App() {
 
       const provider = new RpcProvider({ nodeUrl: RPC_URL });
 
-      const account = new Account({
-        provider,
-        address: DEVNET_ACCOUNT_ADDRESS,
-        signer: DEVNET_PRIVATE_KEY,
-      });
-
       const paymentContract = new Contract({
         abi: paymentJson.abi,
         address: PAYMENT_ADDRESS,
-        providerOrAccount: account,
+        providerOrAccount: wallet.account,
       });
 
       const withdrawTx = await paymentContract.withdraw(
@@ -348,6 +353,30 @@ function App() {
       <p className="subtitle">
         // anonymous payments via zero-knowledge proofs
       </p>
+
+      <div className="wallet-section">
+        {!wallet.isConnected ? (
+          <div className="wallet-buttons">
+            <button className="wallet-button" onClick={connectWallet}>
+              Connect Wallet
+            </button>
+            <button className="wallet-button devnet" onClick={useDevnetAccount}>
+              Use Devnet
+            </button>
+          </div>
+        ) : (
+          <div className="wallet-connected">
+            <span className="wallet-address">
+              {wallet.isDevnet ? "[devnet] " : ""}
+              {wallet.address?.slice(0, 6)}...{wallet.address?.slice(-4)}
+            </span>
+            <button className="wallet-disconnect" onClick={disconnectWallet}>
+              Disconnect
+            </button>
+          </div>
+        )}
+        {walletError && <p className="wallet-error">{walletError}</p>}
+      </div>
 
       <div className="role-selector">
         <button

@@ -62,9 +62,88 @@ h1::before {
 .subtitle {
   text-align: center;
   color: var(--text-secondary);
-  margin-bottom: 3rem;
+  margin-bottom: 1.5rem;
   font-size: 1rem;
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* Wallet */
+.wallet-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.wallet-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.wallet-button {
+  padding: 0.625rem 1.25rem;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all 0.2s ease;
+}
+
+.wallet-button:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.wallet-button.devnet {
+  border-style: dashed;
+}
+
+.wallet-button.devnet:hover {
+  border-color: var(--warning-color);
+  color: var(--warning-color);
+}
+
+.wallet-connected {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid var(--primary-color);
+  border-radius: 6px;
+}
+
+.wallet-address {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--primary-color);
+}
+
+.wallet-disconnect {
+  background: none;
+  border: 1px solid var(--text-dim);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.wallet-disconnect:hover {
+  border-color: var(--error-color);
+  color: var(--error-color);
+}
+
+.wallet-error {
+  color: var(--error-color);
+  font-size: 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 0.5rem;
 }
 
 .role-selector {
