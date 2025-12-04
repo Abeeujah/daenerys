@@ -17,7 +17,7 @@ install-devnet:
 	asdf install starknet-devnet 0.6.1
 
 install-garaga:
-	pip install garaga==1.0.1
+	uv pip install garaga==1.0.1 --prerelease=allow
 
 install-app-deps:
 	cd app && bun install
