@@ -1,2 +1,9 @@
-x = "1"
-y = "2"
+# Sample inputs for testing the privacy-preserving payment circuit
+
+# Private inputs (known only to patient/therapist)
+patient_secret = "12345"
+salt = "67890"
+
+# Public inputs
+therapist_id = "111"
+amount = "1000"

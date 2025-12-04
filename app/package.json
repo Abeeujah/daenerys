@@ -26,10 +26,10 @@
     "eslint": "^9.21.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
-    "vite-plugin-node-polyfills": "^0.22.0",
     "globals": "^15.15.0",
-    "typescript": "~5.7.2",
+    "typescript": "^6.0.0-dev.20251204",
     "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.0"
+    "vite": "^7.2.6",
+    "vite-plugin-node-polyfills": "^0.22.0"
   }
 }

@@ -1,121 +1,174 @@
-# Scaffold Garaga app
+# 🔒 Private Therapy Payments
 
-This is a Noir+Garaga+Starknet starter with in-browser proving and a step-by-step guide how to:
-- Generate and deploy UltraHonk proof verifier contract to Starknet devnet
-- Add state to your privacy preserving app
-- Add wallet connection and deploy to public testnet
+A privacy-preserving payment system for therapists built with **Noir + Garaga + Starknet**. Patients can pay their therapists anonymously using zero-knowledge proofs.
 
-## Install
+Built on [scaffold-garaga](https://github.com/keep-starknet-strange/scaffold-garaga).
 
-Ensure you have node.js >= 20 installed.  
+## How It Works
 
-Bun is used for package management, install it with:
-```sh
-make install-bun
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PATIENT (Private Side)                       │
+├─────────────────────────────────────────────────────────────────┤
+│  1. Generate random: patient_secret, salt                       │
+│  2. ZK Circuit computes:                                        │
+│     • commitment = hash(secret, therapist_id, amount, salt)     │
+│     • nullifier = hash(secret, salt)                            │
+│  3. Deposit funds with commitment (on-chain)                    │
+│  4. Share secret code with therapist (off-chain)                │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   THERAPIST (Claim Side)                        │
+├─────────────────────────────────────────────────────────────────┤
+│  5. Receive secret code from patient                            │
+│  6. Generate ZK proof using same inputs                         │
+│  7. Contract verifies proof and releases funds                  │
+│                                                                 │
+│  ✅ Patient identity NEVER revealed on-chain                    │
+│  ✅ Nullifier prevents double-claiming                          │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-For compiling Noir circuits and generating proofs we need specific versions of Aztec packages:
+## Privacy Guarantees
+
+- **Patient anonymity**: Only commitment hash stored on-chain
+- **No identity linkage**: Nullifier prevents linking payments to patient identity
+- **Therapist verification**: Only therapist with the secret can claim
+- **Double-spend prevention**: Nullifier can only be used once
+
+## Architecture
+
+```
+circuit/
+└── src/main.nr              # Noir ZK circuit
+
+contracts/
+├── verifier/                # Garaga-generated UltraHonk verifier (auto-generated)
+└── payment/
+    └── src/therapy_payment.cairo  # Payment logic with nullifier tracking
+
+app/
+└── src/
+    ├── App.tsx              # React UI
+    ├── types/index.ts       # TypeScript types
+    └── helpers/
+        ├── crypto.ts        # Field generation, encoding
+        └── proof.ts         # Proof formatting for Garaga
+```
+
+## Installation
+
 ```sh
+# Install Bun
+make install-bun
+
+# Install Noir and Barretenberg (specific versions required)
 make install-noir
 make install-barretenberg
-```
 
-Starknet toolkit comes in a single bundle via asdf (the following command will install it if you don't have it):
-```sh
+# Install Starknet toolkit and devnet
 make install-starknet
-```
-
-We also need to install a tool for spawning local Starknet chain:
-```sh
 make install-devnet
-```
 
-Finally we need to install Garaga. Make sure you have Python 3.10 in your system. You may also need to start a separate Python virtual environment for this to work. You can do that with `python3.10 -m venv garaga-venv && source garaga-venv/bin/activate`. Then install with:
-
-```sh
+# Install Garaga (requires Python 3.10)
+python3.10 -m venv .venv && source .venv/bin/activate
 make install-garaga
+
+# Install app dependencies
+make install-app-deps
 ```
 
-Note that we need specific versions of Noir, Barretenberg, and Garaga to work well together. If you are experiencing any issues with code generation, proving, and verification — first of all ensure you have the correct package versions.
+## Quick Start
 
-## Tutorial
-
-This repo is organized in layers: each app iteration is a new git branch.  
-
-Follow the steps and checkout the necessary branch:
-1. [`master`](https://github.com/m-kus/scaffold-garaga/tree/master) — in-browser proof generation and stateless proof verification in devnet
-2. [`1-app-logic`](https://github.com/m-kus/scaffold-garaga/tree/1-app-logic) — more involved Noir circuit logic
-3. [`2-app-state`](https://github.com/m-kus/scaffold-garaga/tree/2-app-state) — extend onchain part with a storage for nullifiers
-4. [`3-testnet`](https://github.com/m-kus/scaffold-garaga/tree/3-testnet) — deploy to public Starknet testnet and interact via wallet
-
-## Run app
-
-First of all we need to build our Noir circuit:
+### 1. Build everything
 
 ```sh
-make build-circuit
+make setup  # Builds circuit, generates verifier, copies artifacts
 ```
 
-Sample inputs are already provided in `Prover.toml`, execute to generate witness:
+Or step by step:
 
 ```sh
-make exec-circuit
+make build-circuit     # Build Noir circuit
+make test-circuit      # Run tests
+make gen-vk            # Generate verification key
+make gen-verifier      # Generate Garaga verifier contract
+make build-contracts   # Build Cairo contracts
+make artifacts         # Copy artifacts to app
 ```
 
-Generate verification key:
+### 2. Start local devnet
 
 ```sh
-make gen-vk
-```
-
-Now we can generate the verifier contract in Cairo using Garaga:
-
-```sh
-make gen-verifier
-```
-
-Let's start our local development network in other terminal instance:
-
-```sh
+# Terminal 1
 make devnet
 ```
 
-You now need to start a new terminal window. Initialize the account we will be using for deployment:
+### 3. Deploy contracts
 
 ```sh
+# Terminal 2
 make accounts-file
-```
-
-First we need to declare out contract ("upload" contract code):
-
-```sh
 make declare-verifier
-```
-
-Now we can instantiate the contract class we obtained (you might need to update the command in Makefile):
-
-```sh
 make deploy-verifier
+# Note the deployed address
+
+make declare-payment
+make deploy-payment
+# Update addresses in app/src/App.tsx if needed
 ```
 
-Great! Now let's copy necessary artifacts:
+### 4. Run the app
 
 ```sh
-make artifacts
+make run-app
 ```
 
-Prepare the app and its requirements so you can run it. Go to the `app` folder and:
-1. Update the contract address in the app code (change App.tsx). 
-1. Make sure you have `tsc` installed. If not, you can install it with `bun add -d typescript@next`.
-1. Install vite with `npm install -D vite`
-1. Build the app with `bun run build`
-1. Finally we can run the app: `bun run dev`
+## Usage
 
-## Useful links
+### As a Patient
 
-- Noir quickstart https://noir-lang.org/docs/getting_started/quick_start
-- Garaga docs https://garaga.gitbook.io/garaga/deploy-your-snark-verifier-on-starknet/noir
-- Starknet.js docs https://starknetjs.com/docs/guides/intro
-- Starknet quickstart https://docs.starknet.io/quick-start/overview/
-- Sncast 101 https://foundry-rs.github.io/starknet-foundry/starknet/101.html
-- Cairo book https://book.cairo-lang.org/
+1. Select "I'm a Patient"
+2. Enter therapist ID and amount
+3. Click "Create Private Payment"
+4. Copy the generated secret code
+5. Share securely with your therapist
+
+### As a Therapist
+
+1. Select "I'm a Therapist"
+2. Paste secret code from patient
+3. Click "Verify Code" to see payment details
+4. Click "Claim Payment with ZK Proof"
+5. Funds are transferred!
+
+## Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `make devnet` | Start local Starknet devnet |
+| `make build-circuit` | Compile Noir circuit |
+| `make test-circuit` | Run circuit tests |
+| `make gen-vk` | Generate verification key |
+| `make gen-verifier` | Generate Garaga verifier |
+| `make build-contracts` | Build all Cairo contracts |
+| `make artifacts` | Copy artifacts to app |
+| `make run-app` | Start development server |
+| `make setup` | Full build pipeline |
+
+## Resources
+
+- [Noir Documentation](https://noir-lang.org/docs)
+- [Garaga Documentation](https://garaga.gitbook.io/garaga)
+- [Starknet Documentation](https://docs.starknet.io)
+- [Cairo Book](https://book.cairo-lang.org)
+
+## Security Considerations
+
+- Keep patient secrets secure - never store on-chain
+- Use secure channels (e.g., encrypted messaging) to share secret codes
+- Nullifiers prevent double-claiming but are publicly visible
+- Consider time-locks and expiration for production deployments
+- Audit smart contracts before mainnet deployment
