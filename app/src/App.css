@@ -461,6 +461,101 @@ h1::before {
   color: var(--text-primary);
 }
 
+/* ZkPassport Verification */
+.verification-section {
+  text-align: center;
+}
+
+.qr-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  background: var(--bg-color);
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+}
+
+.qr-instruction {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.qr-code {
+  width: 200px;
+  height: 200px;
+  border-radius: 8px;
+  image-rendering: pixelated;
+}
+
+.qr-hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 1rem;
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0%, 50%, 100% { opacity: 1; }
+  25%, 75% { opacity: 0.5; }
+}
+
+.verified-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid var(--primary-color);
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--primary-color);
+}
+
+.verification-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skip-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px dashed var(--card-border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.skip-button:hover {
+  border-color: var(--warning-color);
+  color: var(--warning-color);
+}
+
+.badge-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: var(--primary-color);
+  color: #000;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 @media (max-width: 600px) {
   .container {
     padding: 2rem 1rem;
@@ -476,5 +571,10 @@ h1::before {
   
   .panel {
     padding: 1.5rem;
+  }
+
+  .qr-code {
+    width: 160px;
+    height: 160px;
   }
 }

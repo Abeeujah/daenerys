@@ -36,3 +36,19 @@ export interface PaymentSecret {
   /** Nullifier hash (felt252 format) */
   nullifierHash: string;
 }
+
+/** ZkPassport verification status */
+export enum VerificationStatus {
+  Unverified = "unverified",
+  Pending = "pending",
+  Verified = "verified",
+  Failed = "failed",
+}
+
+/** ZkPassport verification state */
+export interface ZkPassportState {
+  status: VerificationStatus;
+  uniqueId?: string;
+  isOver18?: boolean;
+  error?: string;
+}

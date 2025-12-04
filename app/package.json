@@ -13,7 +13,10 @@
     "@aztec/bb.js": "=3.0.0-nightly.20251104",
     "@noir-lang/noir_js": "=1.0.0-beta.16",
     "@starknet-io/get-starknet": "^4.0.7",
+    "@types/qrcode": "^1.5.6",
+    "@zkpassport/sdk": "^0.12.4",
     "garaga": "=1.0.1",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "starknet": "=8.7.0"
