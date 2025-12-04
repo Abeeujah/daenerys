@@ -7,7 +7,7 @@
 /// ## Architecture
 /// - Integrates with Garaga's UltraHonk verifier for ZK proof verification
 /// - Uses cryptographic nullifiers to prevent double-claiming
-/// - Stores balances per therapist for withdrawal
+/// - Transfers ERC20 tokens (ETH/STRK) for actual payments
 ///
 /// ## Security Model
 /// - Commitments hide patient identity while binding to payment details
@@ -33,14 +33,27 @@ pub trait IUltraKeccakZKHonkVerifier<TContractState> {
     ) -> Result<Span<u256>, felt252>;
 }
 
+/// Standard ERC20 interface for token transfers
+#[starknet::interface]
+pub trait IERC20<TContractState> {
+    fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
+    fn transfer_from(
+        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256,
+    ) -> bool;
+    fn balance_of(self: @TContractState, account: ContractAddress) -> u256;
+}
+
 /// Public interface for the therapy payment contract.
 #[starknet::interface]
 pub trait ITherapyPayment<TContractState> {
-    /// Registers a payment commitment from a patient.
+    /// Registers a payment commitment from a patient and transfers tokens.
     ///
     /// # Arguments
     /// * `commitment` - Hash binding patient secret to therapist and amount
-    /// * `amount` - Payment amount in wei
+    /// * `amount` - Payment amount in token units
+    ///
+    /// # Note
+    /// Caller must approve this contract to spend `amount` tokens first.
     fn deposit(ref self: TContractState, commitment: felt252, amount: u256);
 
     /// Claims a payment using a zero-knowledge proof.
@@ -67,11 +80,11 @@ pub trait ITherapyPayment<TContractState> {
     /// Checks if a nullifier has been used.
     fn is_nullifier_used(self: @TContractState, nullifier_hash: felt252) -> bool;
 
-    /// Returns accumulated balance for a therapist.
-    fn get_therapist_balance(self: @TContractState, therapist: ContractAddress) -> u256;
-
     /// Returns the verifier contract address.
     fn get_verifier_address(self: @TContractState) -> ContractAddress;
+
+    /// Returns the token contract address.
+    fn get_token_address(self: @TContractState) -> ContractAddress;
 }
 
 #[starknet::contract]
@@ -80,19 +93,22 @@ pub mod TherapyPayment {
         StoragePointerReadAccess, StoragePointerWriteAccess, Map, StorageMapReadAccess,
         StorageMapWriteAccess,
     };
-    use starknet::{ContractAddress, get_caller_address};
-    use super::{IUltraKeccakZKHonkVerifierDispatcher, IUltraKeccakZKHonkVerifierDispatcherTrait};
+    use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use super::{
+        IUltraKeccakZKHonkVerifierDispatcher, IUltraKeccakZKHonkVerifierDispatcherTrait,
+        IERC20Dispatcher, IERC20DispatcherTrait,
+    };
 
     #[storage]
     struct Storage {
         /// Address of the Garaga verifier contract
         verifier_address: ContractAddress,
+        /// Address of the ERC20 token used for payments (ETH or STRK)
+        token_address: ContractAddress,
         /// Maps commitment -> (depositor, amount)
         deposits: Map<felt252, (ContractAddress, u256)>,
         /// Tracks used nullifiers to prevent double-claiming
         nullifiers: Map<felt252, bool>,
-        /// Accumulated balances per therapist
-        therapist_balances: Map<ContractAddress, u256>,
     }
 
     #[event]
@@ -107,6 +123,7 @@ pub mod TherapyPayment {
     pub struct Deposited {
         #[key]
         pub commitment: felt252,
+        pub depositor: ContractAddress,
         pub amount: u256,
     }
 
@@ -122,20 +139,31 @@ pub mod TherapyPayment {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, verifier_address: ContractAddress) {
+    fn constructor(
+        ref self: ContractState,
+        verifier_address: ContractAddress,
+        token_address: ContractAddress,
+    ) {
         self.verifier_address.write(verifier_address);
+        self.token_address.write(token_address);
     }
 
     #[abi(embed_v0)]
     impl TherapyPaymentImpl of super::ITherapyPayment<ContractState> {
         fn deposit(ref self: ContractState, commitment: felt252, amount: u256) {
             let caller = get_caller_address();
+            let this_contract = get_contract_address();
 
             let (_, existing_amount) = self.deposits.read(commitment);
             assert(existing_amount == 0, 'Commitment already exists');
 
+            // Transfer tokens from caller to this contract
+            let token = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let success = token.transfer_from(caller, this_contract, amount);
+            assert(success, 'Token transfer failed');
+
             self.deposits.write(commitment, (caller, amount));
-            self.emit(Deposited { commitment, amount });
+            self.emit(Deposited { commitment, depositor: caller, amount });
         }
 
         fn withdraw(
@@ -161,8 +189,10 @@ pub mod TherapyPayment {
                 Result::Ok(_) => {
                     self.nullifiers.write(nullifier_hash, true);
 
-                    let current_balance = self.therapist_balances.read(caller);
-                    self.therapist_balances.write(caller, current_balance + amount);
+                    // Transfer tokens from this contract to the therapist
+                    let token = IERC20Dispatcher { contract_address: self.token_address.read() };
+                    let success = token.transfer(caller, amount);
+                    assert(success, 'Token transfer failed');
 
                     let zero_address: ContractAddress = 0.try_into().unwrap();
                     self.deposits.write(commitment, (zero_address, 0));
@@ -181,12 +211,12 @@ pub mod TherapyPayment {
             self.nullifiers.read(nullifier_hash)
         }
 
-        fn get_therapist_balance(self: @ContractState, therapist: ContractAddress) -> u256 {
-            self.therapist_balances.read(therapist)
-        }
-
         fn get_verifier_address(self: @ContractState) -> ContractAddress {
             self.verifier_address.read()
+        }
+
+        fn get_token_address(self: @ContractState) -> ContractAddress {
+            self.token_address.read()
         }
     }
 }

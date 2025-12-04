@@ -79,18 +79,21 @@ build-contracts:
 declare-verifier:
 	cd contracts && sncast declare --package verifier --contract-name UltraKeccakZKHonkVerifier
 
-	# 0x0204901771d84536864668841a8aa7e4ab0de85af88794fdabdaf4dcb17e2f46
+	# 0x0320621469d57b8ef5c15bca12e1a80ec3bb13707752210f2bd4223317bd19ed
 deploy-verifier:
 	# TODO: use class hash from the result of the `make declare-verifier` step
-	cd contracts && sncast deploy --salt 0x00 --class-hash 0x131e765f4b78d5fe82bb981523ed996e4d730a193a374abbe9da5a0efd19dd7
+	cd contracts && sncast deploy --salt 0x01 --class-hash 0x131e765f4b78d5fe82bb981523ed996e4d730a193a374abbe9da5a0efd19dd7
 
 declare-payment:
 	cd contracts && sncast declare --package payment --contract-name TherapyPayment
 
-	# 0x0773b362b26570426d18d39f9a21ccb3e045971d9d4d0ca98df23080b34169d5
+	# 0x0686c6081865066ff8e1dce652980393ff3e51baeda68512d0899537c71dcb00
 deploy-payment:
-	# TODO: use class hash from declare-payment and verifier address from deploy-verifier
-	cd contracts && sncast deploy --salt 0x01 --class-hash 0x13527708f3080795206ea55cd5ed6559d97af76c02f1c8f080f54b28eb7422a --constructor-calldata 0x0204901771d84536864668841a8aa7e4ab0de85af88794fdabdaf4dcb17e2f46
+	# TODO: use class hash from declare-payment, verifier address from deploy-verifier, and token address
+	# Constructor args: verifier_address, token_address
+	# ETH on Sepolia: 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+	# STRK on Sepolia: 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
+	cd contracts && sncast deploy --salt 0x02 --class-hash 0x34012100c547a4df55faaec39761f119055fe73a79ecde1942eb8d603c2522 --constructor-calldata 0x0320621469d57b8ef5c15bca12e1a80ec3bb13707752210f2bd4223317bd19ed 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
 
 # ==================== App Commands ====================
 

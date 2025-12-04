@@ -34,7 +34,21 @@ import { useWallet } from "./hooks/useWallet";
 
 const VERIFIER_ADDRESS = import.meta.env.VITE_VERIFIER_ADDRESS;
 const PAYMENT_ADDRESS = import.meta.env.VITE_PAYMENT_ADDRESS;
+const TOKEN_ADDRESS = import.meta.env.VITE_TOKEN_ADDRESS;
 const RPC_URL = import.meta.env.VITE_RPC_URL;
+
+const ERC20_ABI = [
+  {
+    name: "approve",
+    type: "function",
+    inputs: [
+      { name: "spender", type: "core::starknet::contract_address::ContractAddress" },
+      { name: "amount", type: "core::integer::u256" },
+    ],
+    outputs: [{ type: "core::bool" }],
+    state_mutability: "external",
+  },
+];
 
 function App() {
   const [proofState, setProofState] = useState<ProofStateData>({
@@ -216,6 +230,19 @@ function App() {
       await verifierContract.verify_ultra_keccak_zk_honk_proof(
         callData.slice(1),
       );
+
+      // Approve tokens for the payment contract
+      const tokenContract = new Contract({
+        abi: ERC20_ABI,
+        address: TOKEN_ADDRESS,
+        providerOrAccount: wallet.account,
+      });
+
+      const approveTx = await tokenContract.approve(PAYMENT_ADDRESS, {
+        low: amountWei,
+        high: "0",
+      });
+      await provider.waitForTransaction(approveTx.transaction_hash);
 
       const paymentContract = new Contract({
         abi: paymentJson.abi,
